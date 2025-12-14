@@ -1,0 +1,1 @@
+TALLIFY is a web-based system designed to automate the judging and scoring process for various competitions. It is designed to assist event organizers, judges, and scorers by fully automating the judging process. 
