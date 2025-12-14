@@ -1,0 +1,428 @@
+@model ProjectTallify.Models.ScorerViewModel
+@{
+    Layout = "_ScoringLayout";
+    ViewBag.Role = "Scorer";
+    ViewBag.JudgeName = "Scorer"; // Or use a specific scorer name if available
+    ViewBag.OrganizationName = Model.OrganizationName;
+    ViewBag.OrganizationSubtitle = Model.OrganizationSubtitle;
+}
+
+<style>
+    /* Scorer Specific Layout */
+    .scorer-container {
+        display: grid;
+        grid-template-columns: 1fr 320px; /* Main Content vs Control Panel */
+        gap: 24px;
+        width: 100%;
+        max-width: 1200px;
+        flex: 1;
+        min-height: 0; /* Crucial for nested scroll */
+    }
+
+    .main-scoring-card {
+        background-color: var(--color-surface-glass);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-card);
+        border: 1px solid var(--color-border-glass);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Contain the scrollable table */
+        padding: 24px;
+    }
+
+    .control-column {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 0;
+    }
+
+    .control-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-border);
+        padding: 20px;
+    }
+
+    .control-card-header {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text-soft);
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .btn-score {
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s, filter 0.1s;
+        border-width: 1px;
+        border-style: solid;
+        font-size: 14px;
+    }
+    
+    .btn-score:active { transform: scale(0.98); }
+    .btn-score:hover { filter: brightness(0.95); }
+
+    .btn-correct { background: #dcfce7; color: #166534; border-color: #bbf7d0; grid-column: span 2; }
+    .btn-incorrect { background: #fee2e2; color: #b91c1c; border-color: #fecaca; grid-column: span 2; }
+    .btn-bonus { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    .btn-skip { background: #f3f4f6; color: #4b5563; border-color: #e5e7eb; }
+    .btn-violation { background: #fff; color: #b91c1c; border-color: #b91c1c; border-style: dashed; grid-column: span 2; margin-top: 8px; }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+    }
+    .summary-item:last-child { border-bottom: none; }
+    .summary-label { color: var(--color-text-soft); }
+    .summary-value { font-weight: 700; color: var(--color-text); }
+
+    /* Table Scroll */
+    .questions-scroll-area {
+        flex: 1;
+        overflow-y: auto;
+        margin: 0 -24px; /* Bleed to edges */
+        padding: 0 24px;
+    }
+    
+    .active-row {
+        background-color: var(--color-primary-soft-bg);
+    }
+</style>
+
+<main class="judge-main">
+    
+    @if (Model.IsRoundActive)
+    {
+        <!-- Top Row: Event Info -->
+        <div class="card-top-row" style="margin-bottom: 1rem;">
+            <h1 class="event-title">@Model.EventName</h1>
+            <div class="event-pills">
+                <span class="info-pill">@Model.RoundName</span>
+                <span class="info-pill">@Model.EventCode</span>
+            </div>
+        </div>
+
+        <form asp-action="Index" asp-controller="Scorer" method="post" id="scorer-form" style="display: contents;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="EventCode" value="@Model.EventCode" />
+            <input type="hidden" id="ScoringJson" name="ScoringJson" />
+            
+            @{ var totalSteps = Model.Contestants.Count; }
+
+            <div class="scorer-container">
+                
+                <!-- LEFT: Main Scoring Card -->
+                @for (int i = 0; i < totalSteps; i++)
+                {
+                    var contestant = Model.Contestants[i];
+                    var isActive = i == 0 ? "active" : "";
+                    var displayStyle = i == 0 ? "flex" : "none";
+                    var photo = string.IsNullOrWhiteSpace(contestant.PhotoPath) 
+                                ? Url.Content("~/images/default pfp.png") 
+                                : contestant.PhotoPath;
+
+                    <!-- WIZARD STEP (Wrapper for display toggling) -->
+                    <div class="main-scoring-card wizard-step @isActive" data-step="@i" data-contestant-id="@contestant.Id" style="display: @displayStyle;">
+                        
+                        <!-- Header -->
+                        <div class="criteria-header-row" style="margin-bottom: 16px; border-bottom: 1px solid var(--color-border); padding-bottom: 16px;">
+                            <div class="criteria-meta" style="flex-direction: row; align-items: center; gap: 16px;">
+                                <img src="@photo" alt="@contestant.FullName" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover; border: 1px solid var(--color-border);" />
+                                <div>
+                                    <span class="step-counter">Contestant @(i + 1) of @totalSteps</span>
+                                    <h2 class="criteria-name" style="font-size: 20px; margin-bottom: 2px;">@contestant.FullName</h2>
+                                    <p style="margin: 0; font-size: 13px; color: var(--color-text-soft);">@contestant.School</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Questions Table (Scrollable) -->
+                        <div class="questions-scroll-area">
+                            <table class="app-table" style="width: 100%;">
+                                <thead style="position: sticky; top: 0; background: #fff; z-index: 1;">
+                                    <tr>
+                                        <th style="width: 60px; text-align: center;">#</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int q = 1; q <= Model.TotalQuestions; q++)
+                                    {
+                                        <tr id="row-@contestant.Id-@q" 
+                                            data-contestant-id="@contestant.Id" 
+                                            data-question="@q"
+                                            onclick="selectRow('@contestant.Id', @q)"
+                                            style="cursor: pointer;">
+                                            <td style="text-align: center; font-weight: 600; color: var(--color-text-soft);">@q</td>
+                                            <td class="result-cell">
+                                                <span style="color: #ccc;">-</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Navigation (Bottom of Card) -->
+                        <div class="wizard-navigation" style="margin-top: 16px; padding: 0;">
+                            <button type="button" id="btnPrev" class="btn-nav btn-secondary" disabled>Prev</button>
+                            <div class="nav-right">
+                                <button type="button" id="btnNext" class="btn-nav btn-primary">Next</button>
+                                <button type="button" id="btnSubmit" class="btn-nav btn-success" style="display: none;">Submit</button>
+                            </div>
+                        </div>
+
+                    </div> 
+                    
+                    <!-- RIGHT: Control Panel (Specific to Contestant Step to allow easy toggle, or use shared if logic permits. Let's use shared structure but updated by JS) -->
+                    <!-- Actually, to keep it simple, we render ONE control panel and update it via JS, or render N panels. 
+                         Let's render ONE control panel and use JS to target the *active* contestant ID. -->
+                }
+
+                <!-- SHARED CONTROL COLUMN (Right Side) -->
+                <div class="control-column">
+                    
+                    <!-- Controls -->
+                    <div class="control-card">
+                        <div class="control-header">
+                            Question <span id="active-q-label">1</span>
+                        </div>
+                        <div class="controls-grid">
+                            <button type="button" class="btn-score btn-correct" onclick="handleControlClick('correct')">Correct</button>
+                            <button type="button" class="btn-score btn-incorrect" onclick="handleControlClick('wrong')">Incorrect</button>
+                            <button type="button" class="btn-score btn-bonus" onclick="handleControlClick('bonus')">Bonus</button>
+                            <button type="button" class="btn-score btn-skip" onclick="handleControlClick('skip')">Skip</button>
+                            <button type="button" class="btn-score btn-violation" onclick="handleControlClick('violation')">Violation</button>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="control-card">
+                        <div class="control-header">Live Summary</div>
+                        <div class="summary-item">
+                            <span class="summary-label">Correct</span>
+                            <span class="summary-value" id="summary-correct">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Wrong</span>
+                            <span class="summary-value" id="summary-wrong">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Bonus</span>
+                            <span class="summary-value" id="summary-bonus">0</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </form>
+    }
+    else
+    {
+        <!-- STANDBY / WAITING STATE -->
+        <div class="standby-container text-center" style="margin-top: 3rem; padding: 3rem; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+            <div class="standby-icon" style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.5;">
+                ⏳
+            </div>
+            <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; color: var(--color-text);">
+                Round Not Started
+            </h2>
+            <p style="font-size: 1.1rem; color: var(--color-text-soft); margin-bottom: 2rem;">
+                Please stand by. The organizer has not started this round yet.
+            </p>
+            <button type="button" onclick="window.location.reload()" class="auth-button auth-button-primary" style="max-width: 200px; margin: 0 auto;">
+                Refresh Status
+            </button>
+        </div>
+    }
+
+</main>
+
+@section Scripts {
+    <script>
+        // --- STATE MANAGEMENT ---
+        const scores = {}; 
+        const activeQuestion = {}; // contestantId -> currentQuestionIndex
+        let currentContestantId = null;
+        const totalQuestions = @Model.TotalQuestions;
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initWizard();
+            
+            // Initialize state for each contestant found in DOM
+            document.querySelectorAll('.wizard-step').forEach((step, index) => {
+                const cid = step.getAttribute('data-contestant-id');
+                scores[cid] = {};
+                activeQuestion[cid] = 1; // Start at Q1
+                
+                // If this is the first step, set as current
+                if (index === 0) {
+                    currentContestantId = cid;
+                    updateUI();
+                }
+            });
+        });
+
+        // --- CORE LOGIC ---
+
+        // Called by Control Panel Buttons
+        function handleControlClick(action) {
+            if (!currentContestantId) return;
+            markScore(currentContestantId, action);
+        }
+
+        function markScore(cid, action) {
+            const qIdx = activeQuestion[cid];
+            if (!qIdx) return;
+
+            // 1. Save Score
+            scores[cid][qIdx] = action;
+
+            // 2. Update Table UI
+            const row = document.getElementById(`row-${cid}-${qIdx}`);
+            const cell = row.querySelector('.result-cell');
+            
+            let badge = '';
+            if (action === 'correct') badge = '<span style="color: #166534; font-weight:700;">Correct</span>';
+            else if (action === 'wrong') badge = '<span style="color: #b91c1c; font-weight:700;">Wrong</span>';
+            else if (action === 'bonus') badge = '<span style="color: #b45309; font-weight:600;">Bonus</span>';
+            else if (action === 'skip') badge = '<span style="color: #6b7280;">Skipped</span>';
+            else if (action === 'violation') badge = '<span style="color: #b91c1c; text-decoration: underline;">Violation</span>';
+
+            cell.innerHTML = badge;
+
+            // 3. Auto-Advance Question
+            if (qIdx < totalQuestions) {
+                selectRow(cid, qIdx + 1);
+            }
+
+            // 4. Update Summary
+            updateSummary(cid);
+        }
+
+        // Called when clicking a table row
+        function selectRow(cid, qIdx) {
+            activeQuestion[cid] = qIdx;
+            updateUI();
+        }
+
+        // Updates the entire UI based on currentContestantId and their activeQuestion
+        function updateUI() {
+            if (!currentContestantId) return;
+            const qIdx = activeQuestion[currentContestantId];
+
+            // 1. Highlight Active Row
+            // Remove highlight from all rows of this contestant
+            document.querySelectorAll(`[id^='row-${currentContestantId}-']`).forEach(r => {
+                r.classList.remove('active-row');
+            });
+            // Add to target
+            const row = document.getElementById(`row-${currentContestantId}-${qIdx}`);
+            if (row) {
+                row.classList.add('active-row');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // 2. Update Right Sidebar Labels
+            const qLabel = document.getElementById('active-q-label');
+            if (qLabel) qLabel.textContent = qIdx;
+
+            // 3. Update Summary
+            updateSummary(currentContestantId);
+        }
+
+        function updateSummary(cid) {
+            let correct = 0;
+            let wrong = 0;
+            let bonus = 0;
+            
+            const s = scores[cid];
+            for(const k in s) {
+                if(s[k] === 'correct') correct++;
+                if(s[k] === 'wrong') wrong++;
+                if(s[k] === 'bonus') bonus++;
+            }
+
+            document.getElementById('summary-correct').textContent = correct;
+            document.getElementById('summary-wrong').textContent = wrong;
+            document.getElementById('summary-bonus').textContent = bonus;
+        }
+
+        // --- WIZARD NAVIGATION ---
+        function initWizard() {
+            const steps = document.querySelectorAll('.wizard-step');
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            const btnSubmit = document.getElementById('btnSubmit');
+            
+            let currentStepIndex = 0;
+            const totalSteps = steps.length;
+
+            function showStep(index) {
+                // Toggle visibility of main cards
+                steps.forEach((step, idx) => {
+                    if (idx === index) {
+                        step.style.display = 'flex';
+                        // Update global current ID
+                        currentContestantId = step.getAttribute('data-contestant-id');
+                    } else {
+                        step.style.display = 'none';
+                    }
+                });
+
+                // Refresh UI for the new active contestant
+                updateUI();
+
+                // Button Visibility
+                btnPrev.disabled = index === 0;
+                
+                if (index === totalSteps - 1) {
+                    btnNext.style.display = 'none';
+                    btnSubmit.style.display = 'inline-flex';
+                } else {
+                    btnNext.style.display = 'inline-flex';
+                    btnSubmit.style.display = 'none';
+                }
+            }
+
+            btnPrev.addEventListener('click', () => {
+                if (currentStepIndex > 0) {
+                    currentStepIndex--;
+                    showStep(currentStepIndex);
+                }
+            });
+
+            btnNext.addEventListener('click', () => {
+                if (currentStepIndex < totalSteps - 1) {
+                    currentStepIndex++;
+                    showStep(currentStepIndex);
+                }
+            });
+
+            btnSubmit.addEventListener('click', () => {
+                const input = document.getElementById('ScoringJson');
+                input.value = JSON.stringify(scores);
+                document.getElementById('scorer-form').submit();
+            });
+        }
+    </script>
+}

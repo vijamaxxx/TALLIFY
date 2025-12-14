@@ -1,0 +1,792 @@
+@model ProjectTallify.Models.Event?
+
+@{
+    ViewData["Title"] = "Create Event";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    ViewBag.HideMainNav = true;
+    ViewBag.HideOrgCard = true;
+
+    var isEdit = (Model?.Id ?? 0) > 0;
+}
+
+<div class="app-page app-page--create-event is-active">
+
+    <!-- PAGE HEADER -->
+    <header class="app-page-header">
+        <h1 class="app-page-title">Create Event</h1>
+        <p class="app-page-subtitle">
+            Fill in the basics, choose scoring, add people, and set preferences. You’ll review everything before opening the event.
+        </p>
+    </header>
+
+    <!-- STEP PILL -->
+    <div class="event-create-steps">
+        <div class="event-step-pill is-active" id="eventStepPill">
+            <span id="eventStepPillText">Basic</span>
+        </div>
+    </div>
+
+    <div class="event-create-body">
+
+        <!-- =========================================================
+             HIDDEN FIELDS (for EDIT mode)
+             ========================================================= -->
+        <input type="hidden" id="existingEventId"      value="@(isEdit ? Model!.Id : 0)" />
+        <input type="hidden" id="existingEventType"   value="@(isEdit ? Model!.EventType : "")" />
+        <input type="hidden" id="existingAccessCode"  value="@(isEdit ? Model!.AccessCode : "")" />
+        <input type="hidden" id="existingContestants" value='@(isEdit ? Model!.ContestantsJson : "[]")' />
+        <input type="hidden" id="existingAccessUsers" value='@(isEdit ? Model!.AccessJson : "[]")' />
+        <input type="hidden" id="existingCriteria"    value='@(isEdit ? Model!.AveragingJson : "{}")' />
+        <input type="hidden" id="existingRounds"      value='@(isEdit ? Model!.RoundsJson : "[]")' />
+        <input type="hidden" id="existingPointing"    value='@(isEdit ? Model!.PointingJson : "{}")' />
+        @if (isEdit)
+        {
+            <input type="hidden" id="existingEventName"        value="@Model!.Name" />
+            <input type="hidden" id="existingEventVenue"       value="@Model!.Venue" />
+            <input type="hidden" id="existingEventDescription" value="@Model!.Description" />
+            <input type="hidden" id="existingEventStartDate"   value="@Model!.StartDateTime.ToString("yyyy-MM-dd")" />
+            <input type="hidden" id="existingEventStartTime"   value="@Model!.StartDateTime.ToString("HH:mm")" />
+            <input type="hidden" id="existingThemeColor"       value="@Model!.ThemeColor" />
+            <input type="hidden" id="existingHeaderImage"      value="@Model!.HeaderImage" />
+        }
+
+        <!-- =========================================================
+             STEP 1 — BASIC
+             ========================================================= -->
+        <div class="event-step is-active" data-step="1">
+
+            <!-- BASIC DETAILS -->
+            <section class="event-section-card">
+                <h2 class="event-section-title">Basic details</h2>
+                <div class="event-form-grid">
+                    <!-- Event name -->
+                    <div class="event-field event-field-full">
+                        <div class="event-field-header">
+                            <label class="event-label" for="eventName">
+                                Event Name<span class="required">*</span>
+                            </label>
+                            <div class="event-error-message" data-error-for="eventName"></div>
+                        </div>
+
+                        <input id="eventName"
+                            type="text"
+                            class="event-input"
+                            placeholder="e.g. Annual Science Fair 2025" />
+                    </div>
+
+                    <!-- Venue -->
+                    <div class="event-field event-field-full">
+                        <div class="event-field-header">
+                            <label class="event-label" for="eventVenue">
+                                Venue<span class="required">*</span>
+                            </label>
+                            <div class="event-error-message" data-error-for="eventVenue"></div>
+                        </div>
+                        
+                        <input id="eventVenue"
+                               type="text"
+                               class="event-input"
+                               placeholder="e.g. Grand Hall, Main Building" />
+                    </div>
+
+                    <!-- Description -->
+                    <div class="event-field event-field-full">
+                        <div class="event-field-header">
+                            <label class="event-label" for="eventDescription">Description / Notes</label>
+                        </div>
+                        <textarea id="eventDescription"
+                                  class="event-input event-input-multiline"
+                                  rows="4"
+                                  style="resize:none;"
+                                  placeholder="Briefly describe the event..."></textarea>
+                    </div>
+
+                    <!-- Event start -->
+                    <div class="event-field event-field-half">
+                        <div class="event-field-header">
+                            <label class="event-label" for="eventStartDate">
+                                Event Start<span class="required">*</span>
+                            </label>
+                            <div class="event-error-message" data-error-for="eventStart"></div>
+                        </div>
+                        <div class="event-datetime-row">
+                            <div class="event-input-icon-group">
+                                <input id="eventStartDate"
+                                       type="date"
+                                       class="event-input event-input-icon-inner"
+                                       data-error-key="eventStart" />
+                                <button type="button"
+                                        class="event-input-icon-btn"
+                                        data-date-icon-for="eventStartDate"
+                                        aria-label="Open calendar">
+                                    <i class="ri-calendar-line"></i>
+                                </button>
+                            </div>
+                            <div class="event-input-icon-group">
+                                <input id="eventStartTime"
+                                       type="time"
+                                       class="event-input event-input-icon-inner"
+                                       data-error-key="eventStart" />
+                                <button type="button"
+                                        class="event-input-icon-btn"
+                                        data-time-icon-for="eventStartTime"
+                                        aria-label="Open time picker">
+                                    <i class="ri-time-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- Event end (REMOVED) -->
+
+                    <!-- Event type -->
+                    <div class="event-field event-field-full">
+                        <label class="event-label">Event Type<span class="required">*</span></label>
+                        <div class="event-type-toggle">
+                            <label class="chip-toggle" for="eventTypeCriteria">
+                                <input type="radio"
+                                       name="eventType"
+                                       value="criteria"
+                                       id="eventTypeCriteria"
+                                       checked>
+                                <span class="chip-toggle-inner">Criteria-based</span>
+                            </label>
+                            <label class="chip-toggle" for="eventTypeOrw">
+                                <input type="radio"
+                                       name="eventType"
+                                       value="orw"
+                                       id="eventTypeOrw">
+                                <span class="chip-toggle-inner">Objective Right/Wrong (ORW)</span>
+                            </label>
+                        </div>
+                        <div class="event-type-info" id="eventTypeInfo">
+                            Criteria-based: Judges score contestants on weighted criteria.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CONTESTANTS -->
+            <section class="event-section-card">
+                <div class="event-section-header">
+                    <div>
+                        <h2 class="event-section-title">Contestants</h2>
+                        <p class="event-subtext">Manage participants for your event. At least 2 are required.</p>
+                    </div>
+                </div>
+
+                <div class="event-error-message"
+                    data-error-for="contestants"
+                    style="margin-bottom:8px;"></div>
+
+                <div class="panel-table-wrapper">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">ID</th>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th style="width:180px;">Photo</th>
+                                <th style="width:140px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contestantsBody">
+                            <tr class="event-table-empty table-empty-row">
+                                <td colspan="5">No contestants added yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add contestant button moved below the table -->
+                <div class="event-section-actions" style="margin-top:12px;">
+                    <button type="button"
+                            class="btn-create-add"
+                            id="btnAddContestant">
+                        <i class="ri-add-line"></i> Add contestant
+                    </button>
+                </div>
+            </section>
+
+        </div>
+        <!-- END STEP 1 -->
+
+        <!-- =========================================================
+             STEP 2 
+             ========================================================= -->
+        <div class="event-step" data-step="2">
+
+            <!-- ================= CRITERIA-BASED STEP 2 ================= -->
+            <div id="criteriaStep2">
+
+                <!-- ============================================
+                    CRITERIA SYSTEM (Averaging / Pointing)
+                    ============================================ -->
+                <div class="event-section-card" id="criteriaSystemCard">
+                    <h2 class="event-section-title">Criteria System</h2>
+
+                    <div class="event-type-toggle">
+                        <label class="chip-toggle" for="criteriaSystemAveraging">
+                            <input type="radio" name="criteriaSystem" value="averaging" id="criteriaSystemAveraging" checked>
+                            <span class="chip-toggle-inner">Averaging</span>
+                        </label>
+
+                        <label class="chip-toggle" for="criteriaSystemPointing">
+                            <input type="radio" name="criteriaSystem" value="pointing" id="criteriaSystemPointing">
+                            <span class="chip-toggle-inner">Pointing</span>
+                        </label>
+                    </div>
+
+                    <p class="event-subtext" id="criteriaSystemDescription">
+                        Averaging System: Uses judge averages and criterion weights to compute the final score.
+                    </p>
+                </div>
+
+
+                <!-- Rounds & Scoring (criteria-based) -->
+                <div class="event-section-card">
+                    <div class="event-section-header">
+                        <h2 class="event-section-title">Rounds and Scoring</h2>
+                    </div>
+
+                    <div id="criteriaRoundsList"></div>
+
+                    <div class="event-section-actions event-section-actions--bottom">
+                        <button type="button"
+                                id="btnAddCriteriaRound"
+                                class="btn-create-add">
+                            <i class="ri-add-line"></i> Add Round
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Judges (criteria-based) -->
+                <div class="event-section-card">
+                    <div class="event-section-header">
+                        <div>
+                            <h2 class="event-section-title">Judges</h2>
+                            <p class="event-subtext">Add judges who will score contestants.</p>
+                        </div>
+                    </div>
+
+                    <div class="event-error-message" data-error-for="judges"></div>
+
+                    <div class="panel-table-wrapper">
+                        <table class="app-table" id="judgesTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:80px;">ID</th>
+                                    <th style="width:28%;">Name</th>
+                                    <th style="width:28%;">Email</th>
+                                    <th style="width:110px;">Pin</th>
+                                    <th style="width:170px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="judgesBody">
+                                <!-- rows added by JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: transparent; border-bottom: none;">
+                                    <td colspan="5" style="padding: 14px 20px;">
+                                        <button type="button"
+                                                id="btnAddJudge"
+                                                class="btn-create-add btn-full-width"
+                                                style="margin-top: 0;">
+                                            <i class="ri-add-line"></i> Add judge
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= ORW STEP 2 ================= -->
+            <div id="orwStep2" style="display:none;">
+                <!-- ORW Rounds & Scoring -->
+                <div class="event-section-card">
+                    <div class="event-section-header">
+                        <h2 class="event-section-title">Rounds and Scoring</h2>
+                    </div>
+
+                    <div class="event-error-message" data-error-for="orwRounds"></div>
+                    <div id="orwRoundsList"></div>
+
+                    <div class="event-section-actions event-section-actions--bottom">
+                        <button type="button"
+                                id="btnAddOrwRound"
+                                class="btn-create-add btn-full-width">
+                            <i class="ri-add-line"></i> Add Round
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scorers (ORW) -->
+                <div class="event-section-card">
+                    <div class="event-section-header">
+                        <h2 class="event-section-title">Scorers</h2>
+                        <!-- Removed Add Scorer button from here -->
+                    </div>
+
+                    <div class="event-error-message" data-error-for="scorers"></div>
+                    <p class="event-subtext">
+                        Assign each contestant ID to exactly one scorer.
+                    </p>
+
+                    <div class="panel-table-wrapper">
+                        <table class="app-table" id="orwScorersTable">
+                            <thead>
+                                <tr>
+                                    <th style="width:80px;">ID</th>
+                                    <th style="width:28%;">Name</th>
+                                    <th style="width:28%;">Assigned contestant/s by ID</th>
+                                    <th style="width:110px;">Pin</th>
+                                    <th style="width:170px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orwScorersBody">
+                                <!-- rows added by JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: transparent; border-bottom: none;">
+                                    <td colspan="5" style="padding: 14px 20px;">
+                                        <button type="button"
+                                                id="btnAddScorer"
+                                                class="btn-create-add btn-full-width"
+                                                style="margin-top: 0;">
+                                            <i class="ri-add-line"></i> Add scorer
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END STEP 2 -->
+
+        <!-- =========================================================
+             STEP 3 — APPEARANCE & THEME
+             ========================================================= -->
+        <div class="event-step" data-step="3">
+            <section class="event-section-card">
+                <h2 class="event-section-title">Appearance & Theme</h2>
+
+                <div class="event-form-grid">
+                    <!-- Access Code -->
+                    <div class="event-field event-field-full">
+                        <label class="event-label" id="accessCodeLabel">Access Code for Scorers/Judges</label>
+                        <input id="eventAccessCode"
+                               type="text"
+                               class="event-input"
+                               placeholder="e.g. DWCC2025QUIZ" />
+
+                    </div>
+
+                    <!-- Theme presets -->
+                    <div class="event-field event-field-full">
+                        <label class="event-label">Theme Presets</label>
+                        <p class="event-subtext">
+                            Choose a color theme for the event page.
+                        </p>
+
+                        <div class="theme-preset-grid">
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#ff007a">
+                                <span class="theme-swatch">
+                                    <span style="background:#ff007a;"></span>
+                                    <span style="background:#ff80b5;"></span>
+                                </span>
+                                <span class="theme-label">Tallify Pink</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#2563eb">
+                                <span class="theme-swatch">
+                                    <span style="background:#2563eb;"></span>
+                                    <span style="background:#60a5fa;"></span>
+                                </span>
+                                <span class="theme-label">Royal Blue</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#059669">
+                                <span class="theme-swatch">
+                                    <span style="background:#059669;"></span>
+                                    <span style="background:#6ee7b7;"></span>
+                                </span>
+                                <span class="theme-label">Emerald Green</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#7c3aed">
+                                <span class="theme-swatch">
+                                    <span style="background:#7c3aed;"></span>
+                                    <span style="background:#c4b5fd;"></span>
+                                </span>
+                                <span class="theme-label">Violet</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#f59e0b">
+                                <span class="theme-swatch">
+                                    <span style="background:#f59e0b;"></span>
+                                    <span style="background:#fde68a;"></span>
+                                </span>
+                                <span class="theme-label">Amber</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option"
+                                    data-color="#1f2937">
+                                <span class="theme-swatch">
+                                    <span style="background:#1f2937;"></span>
+                                    <span style="background:#4b5563;"></span>
+                                </span>
+                                <span class="theme-label">Slate</span>
+                            </button>
+
+                            <button type="button"
+                                    class="theme-preset-option theme-preset-option-custom"
+                                    data-color="custom">
+                                <span class="theme-swatch theme-swatch-custom">
+                                    <i class="ri-palette-line"></i>
+                                </span>
+                                <span class="theme-label">Custom color</span>
+                            </button>
+                        </div>
+
+                        <input type="color"
+                               id="eventThemeCustom"
+                               class="theme-color-input-hidden"
+                               value="#ff007a" />
+                    </div>
+
+                    <!-- HEADER IMAGE -->
+                    <div class="event-field event-field-full">
+                        <label class="event-label">Header</label>
+                        <p class="event-subtext">
+                            Optional. Header image will be displayed on the event page.
+                        </p>
+
+                        <div class="header-upload-group">
+                            <label class="header-upload-btn" id="headerImageLabel">
+                                <i class="ri-image-line"></i> Choose photo
+                                <input type="file"
+                                       id="eventHeaderImage"
+                                       accept="image/*,.svg"
+                                       hidden />
+                            </label>
+                            <span id="headerFileName" class="header-filename"></span>
+                            <button type="button"
+                                    id="removeHeaderImage"
+                                    class="btn-danger-soft btn-small event-round-remove">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PREVIEW -->
+                    <div class="event-field event-field-full">
+                        <label class="event-label">Preview</label>
+
+                        <div id="eventPreviewCard" class="preview-card">
+                            <div id="previewHeader" class="preview-header"></div>
+
+                            <div class="preview-body">
+                                <h3 id="previewTitle" class="preview-title">Tallify Competition</h3>
+                                <div class="preview-tags">
+                                    <span class="preview-chip type-chip">CB</span>
+                                    <span class="preview-chip status-chip--open">Open</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <!-- END STEP 3 -->
+
+        <!-- =========================================================
+             STEP 4 — REVIEW
+             ========================================================= -->
+        <div class="event-step" data-step="4">
+
+
+
+            <!-- EVENT DETAILS CARD -->
+            <section class="event-section-card">
+                <h2 class="event-section-title">Event Details</h2>
+
+                                 <div class="event-form-grid">
+                                     <div class="event-field event-field-half">
+                                         <label class="event-label">Event Name</label>
+                                         <input id="reviewEventName"
+                                                type="text"
+                                                class="event-input"
+                                                readonly>
+                                     </div>
+                
+                                     <div class="event-field event-field-half">
+                                         <label class="event-label">Venue</label>
+                                         <input id="reviewEventVenue"
+                                                type="text"
+                                                class="event-input"
+                                                readonly>
+                                     </div>
+                
+                                     <div class="event-field event-field-full">
+                                         <label class="event-label">Description / Notes</label>
+                                         <input id="reviewEventDescription"
+                                                type="text"
+                                                class="event-input"
+                                                readonly>
+                                     </div>
+                
+                                     <div class="event-field event-field-half">
+                                         <label class="event-label">Event Type</label>
+                                         <input id="reviewEventType"
+                                                type="text"
+                                                class="event-input"
+                                                readonly>
+                                     </div>
+                
+                                     <div class="event-field event-field-half">
+                                         <label class="event-label">Event Start</label>
+                                         <div class="event-input-icon-group">
+                                             <input id="reviewEventStart"
+                                                    type="text"
+                                                    class="event-input event-input-icon-inner"
+                                                    readonly>
+                                             <button class="event-input-icon-btn" type="button" tabindex="-1">📅</button>
+                                         </div>
+                                     </div>
+                                 </div>            </section>
+
+            <!-- STEP 4: Contestants (Review) -->
+            <section class="event-section-card">
+                <div class="event-section-header-row">
+                    <h2 class="event-section-title">Contestants</h2>
+                    <div class="event-section-meta">
+                        <span id="reviewContestantCount">0 contestants</span>
+                    </div>
+                </div>
+
+                <div class="panel-table-wrapper review-contestants-table">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th class="col-id">ID</th>
+                                <th class="col-photo">Photo</th>
+                                <th class="col-name">Name</th>
+                                <th class="col-org">Organization</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reviewContestantsBody"></tbody>
+                    </table>
+                </div>
+
+
+            </section>
+
+            <!-- ROUNDS & SCORING (review) -->
+            <section class="event-section-card">
+                <div class="event-section-header-row">
+                    <h2 class="event-section-title">Rounds and Scoring</h2>
+                </div>
+
+                <div id="reviewRoundsContainer">
+                    <!-- filled from JS -->
+                </div>
+
+
+            </section>
+
+            <!-- SCORERS / JUDGES -->
+            <section class="event-section-card">
+                <h2 class="event-section-title" id="reviewPeopleTitle">Judges</h2>
+                <div class="panel-table-wrapper">
+                    <table class="app-table">
+                        <thead>
+                            <tr>
+                                <th style="width:10%;">ID</th>
+                                <th style="width:35%;">Name</th>
+                                <th style="width:35%;">Email</th>
+                                <th style="width:20%;">Pin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reviewScorersBody">
+                            <tr class="table-empty-row">
+                                <td colspan="4">No scorers added yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+
+            <!-- PREFERENCES + PREVIEW -->
+            <section class="event-section-card">
+                <h2 class="event-section-title">Preferences</h2>
+
+                <div class="event-form-grid">
+                    <div class="event-field event-field-third" style="grid-column: span 4;">
+                        <label class="event-label" id="reviewAccessCodeLabel">Access Code</label>
+                        <input id="reviewAccessCode"
+                               type="text"
+                               class="event-input"
+                               readonly>
+                    </div>
+
+                    <div class="event-field event-field-third" style="grid-column: span 4;">
+                        <label class="event-label">Theme Presets</label>
+                        <input id="reviewThemePreset"
+                               type="text"
+                               class="event-input"
+                               readonly>
+                    </div>
+
+                    <div class="event-field event-field-third" style="grid-column: span 4;">
+                        <label class="event-label">Header</label>
+                        <input id="reviewHeaderFile"
+                               type="text"
+                               class="event-input"
+                               readonly>
+                    </div>
+                </div>
+
+                <!-- PREVIEW CARD -->
+                <h2 class="event-section-title" style="margin-top: 32px;">Preview</h2>
+                <div id="reviewPreviewCard" class="preview-card">
+                    <div id="reviewPreviewHeader" class="preview-header"></div>
+
+                    <div class="preview-body">
+                        <h3 id="reviewPreviewEventName" class="preview-title">Tallify Competition</h3>
+                        <div class="preview-tags">
+                            <span id="reviewPreviewTypeChip" class="preview-chip type-chip">CB</span>
+                            <span id="reviewPreviewStatusChip" class="preview-chip status-chip--open">Preparing</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <!-- END STEP 4 -->
+
+    </div> <!-- /.event-create-body -->
+
+    <!-- GLOBAL FOOTER (step navigation) -->
+    <footer class="event-step-footer">
+        <div class="event-step-progress">
+            <span id="eventStepIndex">1</span>
+            out of
+            <span id="eventStepTotal">4</span>
+        </div>
+        <div class="event-step-actions">
+            <button type="button" class="btn-outline" id="btnStepBack">Back</button>
+            <button type="button" class="btn-primary" id="btnStepNext">Next</button>
+        </div>
+    </footer>
+
+</div> <!-- /.app-page -->
+
+<!-- Rank Configuration Modal -->
+<div class="event-rank-modal-backdrop" id="rankConfigModal">
+    <div class="event-rank-modal">
+        <div class="event-rank-modal-header">
+            <div>
+                <h3 class="event-rank-modal-title">Rank Equivalents</h3>
+                <p class="event-rank-modal-subtitle">
+                    Assign points to each possible rank (e.g., 1st = 100 pts, 2nd = 80 pts).
+                </p>
+            </div>
+        </div>
+
+        <div id="rankList" class="rank-row-list"></div>
+
+        <button type="button" id="btnAddRankRow" class="btn-add-rank">
+            Add Rank
+        </button>
+
+        <div class="event-rank-modal-actions">
+            <button type="button" class="btn-outline" data-rank-cancel>Cancel</button>
+            <button type="button" class="btn-primary" data-rank-save>Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Verification Info Modal -->
+<div class="modal fade" id="verificationInfoModal" tabindex="-1" aria-hidden="true" style="background: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+      <div class="modal-header" style="border-bottom: 1px solid #f3f4f6; padding: 20px 24px;">
+        <h5 class="modal-title" style="font-weight: 700; color: #111827;">Verification Email</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        <p id="verificationModalText" style="color: #6b7280; font-size: 14px; margin-bottom: 0;">
+            The verification email will be sent to the email of the judges to verify their email when you publish the event.
+        </p>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid #f3f4f6; padding: 16px 24px; background-color: #f9fafb; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight: 500; color: #374151;">Cancel</button>
+        <button type="button" id="btnProceedStep3" class="btn btn-primary" style="background-color: var(--color-primary); border: none; font-weight: 600;">Next Step</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        bottom: 24px;
+        left: 50%; /* Center horizontally */
+        transform: translateX(-50%); /* Adjust for centering */
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none; /* Allow clicks through container */
+        align-items: center; /* Center toast items if they are narrower */
+    }
+
+    .toast-item {
+        background: #ef4444; /* Default error color */
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: auto; /* Re-enable clicks on toasts */
+        width: fit-content; /* Adjust width to content */
+        text-align: center; /* Center text */
+    }
+
+    .toast-item.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .toast-item.toast-success { background-color: #10b981; }
+    .toast-item.toast-warning { background-color: #f59e0b; }
+    .toast-item.toast-info    { background-color: #3b82f6; }
+</style>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="~/js/create-event.js?v=@DateTime.Now.Ticks" asp-append-version="true"></script>
+    <script src="~/js/settings.js" asp-append-version="true"></script>
+}
